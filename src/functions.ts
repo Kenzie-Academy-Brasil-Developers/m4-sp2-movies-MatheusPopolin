@@ -119,32 +119,47 @@ export const updateMovie = async (
   response: Response
 ): Promise<Response> => {
   const id = Number(request.params.id);
+  const keys = Object.keys(request.body)
 
-  if (!(request.body === true)) {
+  if (keys.length === 0) {
     return response.status(400).json({
       message: `Body is required.`,
     });
   }
 
-  const queryString: string = format(
-    `
-        UPDATE movies 
-        SET (%I) = ROW (%L)
-        WHERE id = $1
-        RETURNING *;
-    `,
-    Object.keys(request.body),
-    Object.values(request.body)
-  );
+  const updatableKeys: MovieRequiredKeys[] = [
+    "description",
+    "duration",
+    "name",
+    "price",
+  ];
 
-  const queryConfig: QueryConfig = {
-    text: queryString,
-    values: [id],
-  };
-
-  const queryResult: iMovieResult = await client.query(queryConfig);
-
-  return response.status(200).json(queryResult.rows[0]);
+  try {
+    const queryString: string = format(
+      `
+          UPDATE movies 
+          SET (%I) = ROW (%L)
+          WHERE id = $1
+          RETURNING *;
+      `,
+      Object.keys(request.body),
+      Object.values(request.body)
+    );
+  
+    const queryConfig: QueryConfig = {
+      text: queryString,
+      values: [id],
+    };
+  
+    const queryResult: iMovieResult = await client.query(queryConfig);
+  
+    return response.status(200).json(queryResult.rows[0]);
+    
+  } catch (error) {
+    return response.status(400).json({
+      message: `Updatable keys are ${updatableKeys}.`,
+    });
+  }  
 };
 
 export const deleteMovie = async (
